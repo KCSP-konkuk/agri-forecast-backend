@@ -2,6 +2,8 @@ package com.agriforecast.backend.service;
 
 import com.agriforecast.backend.dto.LoginRequest;
 import com.agriforecast.backend.dto.LoginResponse;
+import com.agriforecast.backend.dto.SignupRequest;
+import com.agriforecast.backend.dto.SignupResponse;
 import com.agriforecast.backend.entity.AuthPassword;
 import com.agriforecast.backend.entity.MemberProfile;
 import com.agriforecast.backend.entity.MemberUser;
@@ -14,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Optional;
 
 @Service
@@ -87,6 +91,55 @@ public class AuthService {
         
         logger.info("로그인 성공 - 아이디: {}, 이름: {}", user.getId(), userInfo.getName());
         return new LoginResponse(true, "로그인 성공", userInfo);
+    }
+    
+    public SignupResponse signup(SignupRequest request) {
+        logger.info("회원가입 시도 - 아이디: {}, 이름: {}", request.getUsername(), request.getFullname());
+        
+        // 1. 아이디 중복 체크
+        if (memberUserRepository.existsByUserId(request.getUsername())) {
+            logger.warn("이미 존재하는 아이디 - 아이디: {}", request.getUsername());
+            return new SignupResponse(false, "이미 존재하는 아이디입니다.");
+        }
+        
+        // 2. 사용자 생성
+        MemberUser user = new MemberUser();
+        user.setId(request.getUsername());
+        user.setIsActive(true);
+        
+        // 3. 비밀번호 해싱
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        
+        // 4. SALT 생성 (BCrypt는 자체 salt를 포함하지만, DB 스키마에 맞춰 랜덤 값 생성)
+        SecureRandom random = new SecureRandom();
+        byte[] saltBytes = new byte[16];
+        random.nextBytes(saltBytes);
+        String salt = Base64.getEncoder().encodeToString(saltBytes);
+        
+        // 5. AuthPassword 생성
+        AuthPassword authPassword = new AuthPassword();
+        authPassword.setMemberUser(user);
+        authPassword.setSalt(salt);
+        authPassword.setPassword(hashedPassword);
+        
+        // 6. MemberProfile 생성
+        MemberProfile profile = new MemberProfile();
+        profile.setMemberUser(user);
+        profile.setName(request.getFullname());
+        profile.setEmail(request.getEmail());
+        
+        // 7. 관계 설정 및 저장
+        user.setAuthPassword(authPassword);
+        user.setMemberProfile(profile);
+        
+        try {
+            memberUserRepository.save(user);
+            logger.info("회원가입 성공 - 아이디: {}, 이름: {}", user.getId(), profile.getName());
+            return new SignupResponse(true, "회원가입이 완료되었습니다.");
+        } catch (Exception e) {
+            logger.error("회원가입 실패 - 아이디: {}, 에러: {}", request.getUsername(), e.getMessage());
+            return new SignupResponse(false, "회원가입 중 오류가 발생했습니다.");
+        }
     }
 }
 

@@ -9,10 +9,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginRequest {
+public class SignupResponse {
     
-    private String username;  // 아이디
-    private String password; // 비밀번호
+    private boolean success;
+    private String message;
 }
-
 

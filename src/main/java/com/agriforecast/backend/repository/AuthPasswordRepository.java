@@ -14,3 +14,4 @@ public interface AuthPasswordRepository extends JpaRepository<AuthPassword, Inte
     Optional<AuthPassword> findByMemberUser(MemberUser memberUser);
 }
 
+
