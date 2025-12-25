@@ -7,6 +7,8 @@ import com.agriforecast.backend.entity.MemberProfile;
 import com.agriforecast.backend.entity.MemberUser;
 import com.agriforecast.backend.repository.AuthPasswordRepository;
 import com.agriforecast.backend.repository.MemberUserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ import java.util.Optional;
 @Transactional
 public class AuthService {
     
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    
     @Autowired
     private MemberUserRepository memberUserRepository;
     
@@ -28,17 +32,22 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
     
     public LoginResponse login(LoginRequest request) {
+        logger.info("로그인 시도 - 아이디: {}", request.getUsername());
+        
         // 1. 사용자 찾기
-        Optional<MemberUser> userOpt = memberUserRepository.findById(request.getUsername());
+        Optional<MemberUser> userOpt = memberUserRepository.findByUserId(request.getUsername());
         
         if (userOpt.isEmpty()) {
+            logger.warn("사용자를 찾을 수 없음 - 아이디: {}", request.getUsername());
             return new LoginResponse(false, "아이디 또는 비밀번호가 올바르지 않습니다.", null);
         }
         
         MemberUser user = userOpt.get();
+        logger.info("사용자 찾음 - SEQ_NO_A010: {}, ID: {}", user.getSeqNoA010(), user.getId());
         
         // 2. 활성 여부 확인
         if (!user.getIsActive()) {
+            logger.warn("비활성화된 계정 - 아이디: {}", request.getUsername());
             return new LoginResponse(false, "비활성화된 계정입니다.", null);
         }
         
@@ -46,17 +55,23 @@ public class AuthService {
         Optional<AuthPassword> authPasswordOpt = authPasswordRepository.findByMemberUser(user);
         
         if (authPasswordOpt.isEmpty()) {
+            logger.warn("비밀번호 정보를 찾을 수 없음 - SEQ_NO_A010: {}", user.getSeqNoA010());
             return new LoginResponse(false, "비밀번호 정보를 찾을 수 없습니다.", null);
         }
         
         AuthPassword authPassword = authPasswordOpt.get();
+        logger.info("비밀번호 정보 찾음 - 저장된 해시: {}", authPassword.getPassword().substring(0, Math.min(20, authPassword.getPassword().length())) + "...");
         
         // 4. 비밀번호 검증
-        // BCrypt로 해시된 비밀번호와 비교
         String storedPassword = authPassword.getPassword();
+        String inputPassword = request.getPassword();
         
         // BCrypt를 사용한 비밀번호 검증
-        if (!passwordEncoder.matches(request.getPassword(), storedPassword)) {
+        boolean matches = passwordEncoder.matches(inputPassword, storedPassword);
+        logger.info("비밀번호 검증 결과: {}", matches);
+        
+        if (!matches) {
+            logger.warn("비밀번호 불일치 - 아이디: {}", request.getUsername());
             return new LoginResponse(false, "아이디 또는 비밀번호가 올바르지 않습니다.", null);
         }
         
@@ -70,6 +85,7 @@ public class AuthService {
         userInfo.setName(profile != null ? profile.getName() : "");
         userInfo.setEmail(profile != null ? profile.getEmail() : "");
         
+        logger.info("로그인 성공 - 아이디: {}, 이름: {}", user.getId(), userInfo.getName());
         return new LoginResponse(true, "로그인 성공", userInfo);
     }
 }
