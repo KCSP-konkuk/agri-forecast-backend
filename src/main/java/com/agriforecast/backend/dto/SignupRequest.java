@@ -17,3 +17,4 @@ public class SignupRequest {
     private String email;     // 이메일
 }
 
+
