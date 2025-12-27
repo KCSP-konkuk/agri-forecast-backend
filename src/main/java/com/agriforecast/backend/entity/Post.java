@@ -25,7 +25,7 @@ public class Post {
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "SEQ_NO_A010", nullable = false)
     private MemberUser user;  // MemberUser 참조
     
     @Column(nullable = false, length = 200)
