@@ -20,14 +20,15 @@ public class Comment {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "SEQ_NO_A031")
+    private Long seqNoA031;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "SEQ_NO_A030", referencedColumnName = "SEQ_NO_A030", nullable = false)
     private Post post;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "SEQ_NO_A010", nullable = false)
+    @JoinColumn(name = "SEQ_NO_A010", referencedColumnName = "SEQ_NO_A010", nullable = false)
     private MemberUser user;  // MemberUser 참조
     
     @Column(nullable = false, columnDefinition = "TEXT")

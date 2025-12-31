@@ -5,18 +5,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SignupResponse {
-    
-    private boolean success;
-    private String message;
+public class PriceDataResponse {
+    private LocalDate date;
+    private Integer price;
+    private String grade;
 }
-
-
-
-
-
 

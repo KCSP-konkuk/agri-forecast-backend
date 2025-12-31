@@ -23,7 +23,7 @@ public class AuthPassword {
     private Integer seqNoA012;
     
     @OneToOne
-    @JoinColumn(name = "SEQ_NO_A010", nullable = false, unique = true)
+    @JoinColumn(name = "SEQ_NO_A010", referencedColumnName = "SEQ_NO_A010", nullable = false, unique = true)
     private MemberUser memberUser;
     
     @Column(name = "SALT", nullable = false, length = 128)

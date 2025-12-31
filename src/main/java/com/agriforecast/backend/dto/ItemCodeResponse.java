@@ -9,14 +9,9 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SignupResponse {
-    
-    private boolean success;
-    private String message;
+public class ItemCodeResponse {
+    private Integer itemCode;  // SEQ_NO_A021
+    private String itemName;
+    private Integer category;
 }
-
-
-
-
-
 

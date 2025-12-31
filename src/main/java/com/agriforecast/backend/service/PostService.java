@@ -78,7 +78,7 @@ public class PostService {
         post.setViewCount(0);
         
         Post savedPost = postRepository.save(post);
-        logger.info("게시글 작성 완료 - ID: {}, 제목: {}", savedPost.getId(), savedPost.getTitle());
+        logger.info("게시글 작성 완료 - ID: {}, 제목: {}", savedPost.getSeqNoA030(), savedPost.getTitle());
         
         return convertToResponse(savedPost);
     }
@@ -102,7 +102,7 @@ public class PostService {
         post.setContent(request.getContent());
         
         Post updatedPost = postRepository.save(post);
-        logger.info("게시글 수정 완료 - ID: {}", updatedPost.getId());
+        logger.info("게시글 수정 완료 - ID: {}", updatedPost.getSeqNoA030());
         
         return convertToResponse(updatedPost);
     }
@@ -129,7 +129,7 @@ public class PostService {
     private PostResponse convertToResponse(Post post) {
         try {
             PostResponse response = new PostResponse();
-            response.setId(post.getId());
+            response.setId(post.getSeqNoA030());
             response.setTitle(post.getTitle());
             response.setCategory(post.getCategory());
             response.setContent(post.getContent());
@@ -151,7 +151,7 @@ public class PostService {
                             response.setAuthorName(user.getId() != null ? user.getId() : "익명");
                         }
                     } catch (jakarta.persistence.EntityNotFoundException e) {
-                        logger.warn("Post ID {}의 작성자 프로필을 찾을 수 없습니다. ID를 사용합니다.", post.getId());
+                        logger.warn("Post ID {}의 작성자 프로필을 찾을 수 없습니다. ID를 사용합니다.", post.getSeqNoA030());
                         response.setAuthorName(user.getId() != null ? user.getId() : "익명");
                     }
                 } else {
@@ -159,29 +159,29 @@ public class PostService {
                     response.setAuthorName("익명");
                 }
             } catch (jakarta.persistence.EntityNotFoundException e) {
-                logger.warn("Post ID {}의 작성자(MemberUser)를 찾을 수 없습니다. 익명으로 처리합니다.", post.getId());
+                logger.warn("Post ID {}의 작성자(MemberUser)를 찾을 수 없습니다. 익명으로 처리합니다.", post.getSeqNoA030());
                 response.setAuthorId(null);
                 response.setAuthorName("익명");
             } catch (Exception e) {
-                logger.warn("Post ID {}의 작성자 정보 조회 중 오류 발생: {}", post.getId(), e.getMessage());
+                logger.warn("Post ID {}의 작성자 정보 조회 중 오류 발생: {}", post.getSeqNoA030(), e.getMessage());
                 response.setAuthorId(null);
                 response.setAuthorName("익명");
             }
             
             // 댓글 개수 (Repository에서 직접 조회하여 LAZY 로딩 문제 방지)
             try {
-                response.setCommentCount(commentRepository.countByPostId(post.getId()));
+                response.setCommentCount(commentRepository.countByPostId(post.getSeqNoA030()));
             } catch (Exception e) {
-                logger.warn("댓글 개수 조회 실패 - postId: {}, error: {}", post.getId(), e.getMessage());
+                logger.warn("댓글 개수 조회 실패 - postId: {}, error: {}", post.getSeqNoA030(), e.getMessage());
                 response.setCommentCount(0L);
             }
             
             return response;
         } catch (Exception e) {
-            logger.error("PostResponse 변환 실패 - postId: {}, error: {}", post.getId(), e.getMessage(), e);
+            logger.error("PostResponse 변환 실패 - postId: {}, error: {}", post.getSeqNoA030(), e.getMessage(), e);
             // 최소한의 정보라도 반환
             PostResponse response = new PostResponse();
-            response.setId(post.getId());
+            response.setId(post.getSeqNoA030());
             response.setTitle(post.getTitle() != null ? post.getTitle() : "");
             response.setCategory(post.getCategory() != null ? post.getCategory() : "");
             response.setContent(post.getContent() != null ? post.getContent() : "");

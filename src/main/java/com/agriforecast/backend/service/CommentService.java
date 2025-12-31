@@ -59,7 +59,7 @@ public class CommentService {
         comment.setContent(request.getContent());
         
         Comment savedComment = commentRepository.save(comment);
-        logger.info("댓글 작성 완료 - ID: {}, 게시글 ID: {}", savedComment.getId(), postId);
+        logger.info("댓글 작성 완료 - ID: {}, 게시글 ID: {}", savedComment.getSeqNoA031(), postId);
         
         return convertToResponse(savedComment);
     }
@@ -81,7 +81,7 @@ public class CommentService {
         comment.setContent(request.getContent());
         
         Comment updatedComment = commentRepository.save(comment);
-        logger.info("댓글 수정 완료 - ID: {}", updatedComment.getId());
+        logger.info("댓글 수정 완료 - ID: {}", updatedComment.getSeqNoA031());
         
         return convertToResponse(updatedComment);
     }
@@ -107,7 +107,7 @@ public class CommentService {
     // Entity를 Response로 변환
     private CommentResponse convertToResponse(Comment comment) {
         CommentResponse response = new CommentResponse();
-        response.setId(comment.getId());
+        response.setId(comment.getSeqNoA031());
         response.setContent(comment.getContent());
         response.setCreatedAt(comment.getCreatedAt());
         response.setUpdatedAt(comment.getUpdatedAt());

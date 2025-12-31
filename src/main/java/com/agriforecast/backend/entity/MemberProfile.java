@@ -24,7 +24,7 @@ public class MemberProfile {
     private Integer seqNoA011;
     
     @OneToOne
-    @JoinColumn(name = "SEQ_NO_A010", nullable = false, unique = true)
+    @JoinColumn(name = "SEQ_NO_A010", referencedColumnName = "SEQ_NO_A010", nullable = false, unique = true)
     private MemberUser memberUser;
     
     @Column(name = "NAME", nullable = false, length = 20)

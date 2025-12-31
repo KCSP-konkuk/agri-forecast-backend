@@ -25,7 +25,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     
     // 게시글 상세 조회 (user와 user.memberProfile 함께 fetch)
     @EntityGraph(attributePaths = {"user", "user.memberProfile"})
-    @Query("SELECT p FROM Post p WHERE p.id = :id")
+    @Query("SELECT p FROM Post p WHERE p.seqNoA030 = :id")
     Optional<Post> findByIdWithUser(@Param("id") Long id);
     
     // 사용자별 게시글 조회 (MemberUser의 seqNoA010 사용)

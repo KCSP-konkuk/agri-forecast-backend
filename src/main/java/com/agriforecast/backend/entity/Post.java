@@ -22,10 +22,11 @@ public class Post {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "SEQ_NO_A030")
+    private Long seqNoA030;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "SEQ_NO_A010", nullable = false)
+    @JoinColumn(name = "SEQ_NO_A010", referencedColumnName = "SEQ_NO_A010", nullable = false)
     private MemberUser user;  // MemberUser 참조
     
     @Column(nullable = false, length = 200)

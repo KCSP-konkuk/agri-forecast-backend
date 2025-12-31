@@ -12,13 +12,15 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     
     // 게시글별 댓글 조회 (생성일시 오름차순)
-    List<Comment> findByPostIdOrderByCreatedAtAsc(Long postId);
+    @Query("SELECT c FROM Comment c WHERE c.post.seqNoA030 = :postId ORDER BY c.createdAt ASC")
+    List<Comment> findByPostIdOrderByCreatedAtAsc(@Param("postId") Long postId);
     
     // 사용자별 댓글 조회 (MemberUser의 seqNoA010 사용)
     @Query("SELECT c FROM Comment c WHERE c.user.seqNoA010 = :userId ORDER BY c.createdAt DESC")
     List<Comment> findByUserIdOrderByCreatedAtDesc(@Param("userId") Integer userId);
     
     // 게시글별 댓글 개수
-    long countByPostId(Long postId);
+    @Query("SELECT COUNT(c) FROM Comment c WHERE c.post.seqNoA030 = :postId")
+    long countByPostId(@Param("postId") Long postId);
 }
 
