@@ -1,6 +1,8 @@
 package com.agriforecast.backend.service;
 
 import com.agriforecast.backend.entity.ExchangeRate;
+import com.agriforecast.backend.entity.ExchangeRateDaily;
+import com.agriforecast.backend.repository.ExchangeRateDailyRepository;
 import com.agriforecast.backend.repository.ExchangeRateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +34,15 @@ public class ExchangeRateCollectService {
     private String authKey;
 
     private final ExchangeRateRepository exchangeRateRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final ExchangeRateDailyRepository exchangeRateDailyRepository;
+    private final RestTemplate restTemplate;
 
-    public ExchangeRateCollectService(ExchangeRateRepository exchangeRateRepository) {
+    public ExchangeRateCollectService(ExchangeRateRepository exchangeRateRepository,
+                                       ExchangeRateDailyRepository exchangeRateDailyRepository,
+                                       RestTemplate restTemplate) {
         this.exchangeRateRepository = exchangeRateRepository;
+        this.exchangeRateDailyRepository = exchangeRateDailyRepository;
+        this.restTemplate = restTemplate;
     }
 
     /**
@@ -57,7 +64,7 @@ public class ExchangeRateCollectService {
 
             int periodType = getPeriodType(day);
             Double usd = extractRate(rates, "USD");
-            Double cny = extractRate(rates, "CNY");
+            Double cny = extractRate(rates, "CNH");
 
             if (usd != null) {
                 usdByPeriod.computeIfAbsent(periodType, k -> new ArrayList<>()).add(usd);
@@ -88,6 +95,56 @@ public class ExchangeRateCollectService {
         }
 
         logger.info("환율 저장 완료 - {}/{}, {}건", year, month, savedCount);
+        return savedCount;
+    }
+
+    /**
+     * 오늘 환율 수집 (매일 자동 호출용)
+     * 주말/공휴일은 API 응답이 비어있어 자동 skip
+     */
+    public boolean collectToday() {
+        return collectByDate(LocalDate.now());
+    }
+
+    /**
+     * 특정 날짜 환율 수집
+     */
+    public boolean collectByDate(LocalDate date) {
+        if (exchangeRateDailyRepository.findByBaseDate(date).isPresent()) {
+            logger.info("환율 일별 이미 존재 - {}", date);
+            return false;
+        }
+
+        List<Map<String, Object>> rates = fetchRates(date);
+        if (rates == null || rates.isEmpty()) {
+            logger.warn("환율 데이터 없음 (주말/공휴일) - {}", date);
+            return false;
+        }
+
+        Double usd = extractRate(rates, "USD");
+        Double cny = extractRate(rates, "CNH");
+        if (usd == null && cny == null) return false;
+
+        ExchangeRateDaily entity = new ExchangeRateDaily();
+        entity.setBaseDate(date);
+        entity.setUsdKrw(usd);
+        entity.setCnyKrw(cny);
+        exchangeRateDailyRepository.save(entity);
+
+        logger.info("환율 일별 저장 완료 - {} (USD={}, CNY={})", date, usd, cny);
+        return true;
+    }
+
+    /**
+     * 날짜 범위로 일별 환율 일괄 수집 (과거 데이터 채우기용)
+     */
+    public int collectDailyRange(LocalDate startDate, LocalDate endDate) {
+        int savedCount = 0;
+        for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
+            if (d.getDayOfWeek().getValue() >= 6) continue;
+            if (collectByDate(d)) savedCount++;
+        }
+        logger.info("환율 일별 범위 저장 완료 - {} ~ {}, {}건", startDate, endDate, savedCount);
         return savedCount;
     }
 

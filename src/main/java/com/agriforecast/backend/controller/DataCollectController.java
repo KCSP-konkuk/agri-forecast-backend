@@ -1,9 +1,11 @@
 package com.agriforecast.backend.controller;
 
 import com.agriforecast.backend.service.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -110,6 +112,29 @@ public class DataCollectController {
             @RequestParam int year, @RequestParam int month) {
         int saved = exchangeRateCollectService.collectByYearMonth(year, month);
         return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
+    }
+
+    /**
+     * 환율 일별 수집 - 오늘
+     * POST /api/collect/exchange/daily
+     */
+    @PostMapping("/exchange/daily")
+    public ResponseEntity<Map<String, Object>> collectExchangeToday() {
+        boolean saved = exchangeRateCollectService.collectToday();
+        return ResponseEntity.ok(Map.of("saved", saved, "date", LocalDate.now().toString()));
+    }
+
+    /**
+     * 환율 일별 수집 - 날짜 범위 (과거 데이터 채우기용)
+     * POST /api/collect/exchange/daily/range?startDate=2024-01-01&endDate=2024-12-31
+     */
+    @PostMapping("/exchange/daily/range")
+    public ResponseEntity<Map<String, Object>> collectExchangeDailyRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        int saved = exchangeRateCollectService.collectDailyRange(startDate, endDate);
+        return ResponseEntity.ok(Map.of("saved", saved,
+                "startDate", startDate.toString(), "endDate", endDate.toString()));
     }
 
     /**
