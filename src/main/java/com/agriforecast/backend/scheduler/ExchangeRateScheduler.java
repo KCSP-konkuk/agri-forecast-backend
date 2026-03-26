@@ -20,7 +20,7 @@ public class ExchangeRateScheduler {
     /**
      * 매일 오전 11시 수집 (한국수출입은행 API는 11시 이후 당일 데이터 제공)
      */
-    @Scheduled(cron = "0 0 11 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 20 11 * * *", zone = "Asia/Seoul")
     public void collectDailyExchangeRate() {
         logger.info("환율 일별 자동 수집 시작");
         boolean saved = exchangeRateCollectService.collectToday();
