@@ -4,28 +4,34 @@ import com.agriforecast.backend.entity.CpiData;
 import com.agriforecast.backend.entity.PpiData;
 import com.agriforecast.backend.repository.CpiDataRepository;
 import com.agriforecast.backend.repository.PpiDataRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
 
 /**
  * KOSIS API → CpiData, PpiData DB 저장
- * API: https://kosis.kr/openapi/statisticsData.do
- * 월별 데이터를 직접 저장 (집계 불필요)
+ * CPI: 소비자물가지수 품목별 (배추, 양배추, 양파)
+ * PPI: 생산자물가지수 품목별 (배추, 양배추, 양파)
  */
 @Service
 @Transactional
 public class KosisService {
 
     private static final Logger logger = LoggerFactory.getLogger(KosisService.class);
-    private static final String BASE_URL = "https://kosis.kr/openapi/statisticsData.do";
+    private static final String BASE_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
 
     @Value("${kosis.api-key}")
     private String apiKey;
@@ -36,106 +42,172 @@ public class KosisService {
     @Value("${kosis.cpi.tbl-id}")
     private String cpiTblId;
 
+    @Value("${kosis.cpi.itm-id}")
+    private String cpiItmId;
+
+    @Value("${kosis.cpi.obj-l1}")
+    private String cpiObjL1;
+
     @Value("${kosis.ppi.org-id}")
     private String ppiOrgId;
 
     @Value("${kosis.ppi.tbl-id}")
     private String ppiTblId;
 
+    @Value("${kosis.ppi.itm-id}")
+    private String ppiItmId;
+
     private final CpiDataRepository cpiDataRepository;
     private final PpiDataRepository ppiDataRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    public KosisService(CpiDataRepository cpiDataRepository, PpiDataRepository ppiDataRepository) {
+    public KosisService(CpiDataRepository cpiDataRepository, PpiDataRepository ppiDataRepository,
+                        RestTemplate restTemplate) {
         this.cpiDataRepository = cpiDataRepository;
         this.ppiDataRepository = ppiDataRepository;
+        this.restTemplate = restTemplate;
     }
 
+    // CPI 품목 코드: objL2 사용 (DT_1J22112 테이블)
+    private static final Map<String, String> CPI_ITEM_CODES = Map.of(
+            "배추",  "A02A01701",
+            "양배추", "A02A01704",
+            "양파",  "A02A01722"
+    );
+
     /**
-     * 연도 범위로 CPI 수집 및 저장
+     * 연도 범위로 CPI 수집 및 저장 (배추, 양배추, 양파)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int collectCpi(int startYear, int endYear) {
         String startPrd = startYear + "01";
         String endPrd = endYear + "12";
-        List<Map<String, Object>> items = fetchKosis(cpiOrgId, cpiTblId, startPrd, endPrd);
-        if (items == null) return 0;
 
         int savedCount = 0;
-        for (Map<String, Object> item : items) {
-            try {
-                String prd = String.valueOf(item.get("PRD_DE")); // e.g. "202401"
-                int year = Integer.parseInt(prd.substring(0, 4));
-                int month = Integer.parseInt(prd.substring(4, 6));
-                double value = Double.parseDouble(String.valueOf(item.get("DT")));
+        for (Map.Entry<String, String> entry : CPI_ITEM_CODES.entrySet()) {
+            String itemName = entry.getKey();
+            String objL2 = entry.getValue();
 
-                if (cpiDataRepository.findByYearAndMonth(year, month).isPresent()) continue;
-
-                CpiData cpi = new CpiData();
-                cpi.setYear(year);
-                cpi.setMonth(month);
-                cpi.setCpi(value);
-                cpiDataRepository.save(cpi);
-                savedCount++;
-            } catch (Exception e) {
-                logger.warn("CPI 데이터 파싱 실패: {}", item);
+            List<Map<String, Object>> items = fetchKosis(cpiOrgId, cpiTblId, cpiItmId, cpiObjL1, objL2, startPrd, endPrd);
+            if (items == null) {
+                logger.warn("CPI 항목 수집 실패: {}", itemName);
+                continue;
             }
+
+            for (Map<String, Object> item : items) {
+                try {
+                    String prd = String.valueOf(item.get("PRD_DE"));
+                    int year = Integer.parseInt(prd.substring(0, 4));
+                    int month = Integer.parseInt(prd.substring(4, 6));
+                    double value = Double.parseDouble(String.valueOf(item.get("DT")));
+
+                    if (cpiDataRepository.findByYearAndMonthAndItemName(year, month, itemName).isPresent()) continue;
+
+                    CpiData cpi = new CpiData();
+                    cpi.setYear(year);
+                    cpi.setMonth(month);
+                    cpi.setItemName(itemName);
+                    cpi.setCpi(value);
+                    cpiDataRepository.save(cpi);
+                    savedCount++;
+                } catch (Exception e) {
+                    logger.warn("CPI 데이터 파싱 실패 [{}]: {}", itemName, item);
+                }
+            }
+            logger.info("CPI [{}] 수집 완료", itemName);
         }
-        logger.info("CPI 저장 완료 - {}~{}, {}건", startYear, endYear, savedCount);
+        logger.info("CPI 저장 완료 - {}~{}, 총 {}건", startYear, endYear, savedCount);
         return savedCount;
     }
 
+    // PPI 품목 코드: objL1 사용 (DT_404Y016 테이블)
+    private static final Map<String, String> PPI_ITEM_CODES = Map.of(
+            "배추",  "13102134764ACC_CD.10112101AA",
+            "양배추", "13102134764ACC_CD.10112121AA",
+            "양파",  "13102134764ACC_CD.10112117AA"
+    );
+
     /**
-     * 연도 범위로 PPI 수집 및 저장
+     * 연도 범위로 PPI 수집 및 저장 (배추, 양배추, 양파)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public int collectPpi(int startYear, int endYear) {
         String startPrd = startYear + "01";
         String endPrd = endYear + "12";
-        List<Map<String, Object>> items = fetchKosis(ppiOrgId, ppiTblId, startPrd, endPrd);
-        if (items == null) return 0;
 
         int savedCount = 0;
-        for (Map<String, Object> item : items) {
-            try {
-                String prd = String.valueOf(item.get("PRD_DE"));
-                int year = Integer.parseInt(prd.substring(0, 4));
-                int month = Integer.parseInt(prd.substring(4, 6));
-                double value = Double.parseDouble(String.valueOf(item.get("DT")));
+        for (Map.Entry<String, String> entry : PPI_ITEM_CODES.entrySet()) {
+            String itemName = entry.getKey();
+            String objL1 = entry.getValue();
 
-                if (ppiDataRepository.findByYearAndMonth(year, month).isPresent()) continue;
-
-                PpiData ppi = new PpiData();
-                ppi.setYear(year);
-                ppi.setMonth(month);
-                ppi.setPpi(value);
-                ppiDataRepository.save(ppi);
-                savedCount++;
-            } catch (Exception e) {
-                logger.warn("PPI 데이터 파싱 실패: {}", item);
+            List<Map<String, Object>> items = fetchKosis(ppiOrgId, ppiTblId, ppiItmId, objL1, "", startPrd, endPrd);
+            if (items == null) {
+                logger.warn("PPI 항목 수집 실패: {}", itemName);
+                continue;
             }
+
+            for (Map<String, Object> item : items) {
+                try {
+                    String prd = String.valueOf(item.get("PRD_DE"));
+                    int year = Integer.parseInt(prd.substring(0, 4));
+                    int month = Integer.parseInt(prd.substring(4, 6));
+                    double value = Double.parseDouble(String.valueOf(item.get("DT")));
+
+                    if (ppiDataRepository.findByYearAndMonthAndItemName(year, month, itemName).isPresent()) continue;
+
+                    PpiData ppi = new PpiData();
+                    ppi.setYear(year);
+                    ppi.setMonth(month);
+                    ppi.setItemName(itemName);
+                    ppi.setPpi(value);
+                    ppiDataRepository.save(ppi);
+                    savedCount++;
+                } catch (Exception e) {
+                    logger.warn("PPI 데이터 파싱 실패 [{}]: {}", itemName, item);
+                }
+            }
+            logger.info("PPI [{}] 수집 완료", itemName);
         }
-        logger.info("PPI 저장 완료 - {}~{}, {}건", startYear, endYear, savedCount);
+        logger.info("PPI 저장 완료 - {}~{}, 총 {}건", startYear, endYear, savedCount);
         return savedCount;
     }
 
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> fetchKosis(String orgId, String tblId, String startPrd, String endPrd) {
+    private List<Map<String, Object>> fetchKosis(String orgId, String tblId, String itmId,
+                                                  String objL1, String objL2,
+                                                  String startPrd, String endPrd) {
         try {
-            String url = UriComponentsBuilder.fromHttpUrl(BASE_URL)
-                    .queryParam("method", "getList")
-                    .queryParam("apiKey", apiKey)
-                    .queryParam("orgId", orgId)
-                    .queryParam("tblId", tblId)
-                    .queryParam("itmId", "T+")
-                    .queryParam("objL1", "ALL")
-                    .queryParam("format", "json")
-                    .queryParam("jsonVD", "Y")
-                    .queryParam("prdSe", "M")
-                    .queryParam("startPrdDe", startPrd)
-                    .queryParam("endPrdDe", endPrd)
-                    .build().toUriString();
+            String url = BASE_URL
+                    + "?method=getList"
+                    + "&apiKey=" + apiKey
+                    + "&itmId=" + itmId
+                    + "&objL1=" + objL1
+                    + "&objL2=" + objL2
+                    + "&objL3=&objL4=&objL5=&objL6=&objL7=&objL8="
+                    + "&format=json"
+                    + "&jsonVD=Y"
+                    + "&prdSe=M"
+                    + "&startPrdDe=" + startPrd
+                    + "&endPrdDe=" + endPrd
+                    + "&orgId=" + orgId
+                    + "&tblId=" + tblId;
 
-            Object response = restTemplate.getForObject(url, Object.class);
-            if (response instanceof List) return (List<Map<String, Object>>) response;
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            headers.set("Accept", "application/json, text/plain, */*");
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            logger.info("KOSIS 요청 URL: {}", url);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            String raw = response.getBody();
+
+            if (raw == null || !raw.trim().startsWith("[")) {
+                logger.error("KOSIS API 비정상 응답 - orgId: {}, tblId: {}, 응답: {}", orgId, tblId,
+                        raw != null ? raw.substring(0, Math.min(300, raw.length())) : "null");
+                return null;
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(raw, new TypeReference<List<Map<String, Object>>>() {});
         } catch (Exception e) {
             logger.error("KOSIS API 호출 실패 - orgId: {}, tblId: {}: {}", orgId, tblId, e.getMessage());
         }

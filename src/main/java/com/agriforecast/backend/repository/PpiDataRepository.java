@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface PpiDataRepository extends JpaRepository<PpiData, Integer> {
 
-    Optional<PpiData> findByYearAndMonth(Integer year, Integer month);
+    Optional<PpiData> findByYearAndMonthAndItemName(Integer year, Integer month, String itemName);
 
     List<PpiData> findByYearBetweenOrderByYearAscMonthAsc(Integer startYear, Integer endYear);
 }

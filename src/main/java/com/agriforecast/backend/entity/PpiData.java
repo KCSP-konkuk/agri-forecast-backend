@@ -7,11 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * 생산자물가지수 (월별)
+ * 생산자물가지수 (월별, 품목별)
  */
 @Entity
 @Table(name = "ppi_data", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"YEAR", "MONTH"})
+        @UniqueConstraint(columnNames = {"YEAR", "MONTH", "ITEM_NAME"})
 })
 @Getter
 @Setter
@@ -28,6 +28,9 @@ public class PpiData {
 
     @Column(name = "MONTH", nullable = false)
     private Integer month;
+
+    @Column(name = "ITEM_NAME", nullable = false, length = 50)
+    private String itemName;
 
     @Column(name = "PPI", nullable = false)
     private Double ppi;

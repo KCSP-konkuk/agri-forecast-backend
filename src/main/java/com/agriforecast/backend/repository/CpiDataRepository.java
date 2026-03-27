@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface CpiDataRepository extends JpaRepository<CpiData, Integer> {
 
-    Optional<CpiData> findByYearAndMonth(Integer year, Integer month);
+    Optional<CpiData> findByYearAndMonthAndItemName(Integer year, Integer month, String itemName);
 
     List<CpiData> findByYearBetweenOrderByYearAscMonthAsc(Integer startYear, Integer endYear);
 }
