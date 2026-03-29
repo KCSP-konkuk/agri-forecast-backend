@@ -8,11 +8,11 @@ import java.util.Optional;
 
 public interface AgriPriceRepository extends JpaRepository<AgriPrice, Integer> {
 
-    Optional<AgriPrice> findByItemNameAndYearAndMonthAndPeriodType(
-            String itemName, Integer year, Integer month, Integer periodType);
+    Optional<AgriPrice> findByItemNameAndYearAndMonthAndDay(
+            String itemName, Integer year, Integer month, Integer day);
 
-    List<AgriPrice> findByItemNameAndYearBetweenOrderByYearAscMonthAscPeriodTypeAsc(
+    List<AgriPrice> findByItemNameAndYearBetweenOrderByYearAscMonthAscDayAsc(
             String itemName, Integer startYear, Integer endYear);
 
-    List<AgriPrice> findByItemNameOrderByYearAscMonthAscPeriodTypeAsc(String itemName);
+    List<AgriPrice> findByItemNameOrderByYearAscMonthAscDayAsc(String itemName);
 }
