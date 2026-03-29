@@ -120,6 +120,36 @@ public class KosisService {
         return savedCount;
     }
 
+    /**
+     * 특정 연월 CPI 수집 (테스트/스케줄러용)
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public int collectCpiByYearMonth(int year, int month) {
+        String prd = year + String.format("%02d", month);
+        int savedCount = 0;
+        for (Map.Entry<String, String> entry : CPI_ITEM_CODES.entrySet()) {
+            String itemName = entry.getKey();
+            String objL2 = entry.getValue();
+            List<Map<String, Object>> items = fetchKosis(cpiOrgId, cpiTblId, cpiItmId, cpiObjL1, objL2, prd, prd);
+            if (items == null) { logger.warn("CPI 항목 수집 실패: {}", itemName); continue; }
+            for (Map<String, Object> item : items) {
+                try {
+                    String p = String.valueOf(item.get("PRD_DE"));
+                    int y = Integer.parseInt(p.substring(0, 4));
+                    int m = Integer.parseInt(p.substring(4, 6));
+                    double value = Double.parseDouble(String.valueOf(item.get("DT")));
+                    if (cpiDataRepository.findByYearAndMonthAndItemName(y, m, itemName).isPresent()) continue;
+                    CpiData cpi = new CpiData();
+                    cpi.setYear(y); cpi.setMonth(m); cpi.setItemName(itemName); cpi.setCpi(value);
+                    cpiDataRepository.save(cpi);
+                    savedCount++;
+                } catch (Exception e) { logger.warn("CPI 파싱 실패 [{}]: {}", itemName, item); }
+            }
+        }
+        logger.info("CPI 저장 완료 - {}/{}, 총 {}건", year, month, savedCount);
+        return savedCount;
+    }
+
     // PPI 품목 코드: objL1 사용 (DT_404Y016 테이블)
     private static final Map<String, String> PPI_ITEM_CODES = Map.of(
             "배추",  "13102134764ACC_CD.10112101AA",
@@ -169,6 +199,36 @@ public class KosisService {
             logger.info("PPI [{}] 수집 완료", itemName);
         }
         logger.info("PPI 저장 완료 - {}~{}, 총 {}건", startYear, endYear, savedCount);
+        return savedCount;
+    }
+
+    /**
+     * 특정 연월 PPI 수집 (테스트/스케줄러용)
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public int collectPpiByYearMonth(int year, int month) {
+        String prd = year + String.format("%02d", month);
+        int savedCount = 0;
+        for (Map.Entry<String, String> entry : PPI_ITEM_CODES.entrySet()) {
+            String itemName = entry.getKey();
+            String objL1 = entry.getValue();
+            List<Map<String, Object>> items = fetchKosis(ppiOrgId, ppiTblId, ppiItmId, objL1, "", prd, prd);
+            if (items == null) { logger.warn("PPI 항목 수집 실패: {}", itemName); continue; }
+            for (Map<String, Object> item : items) {
+                try {
+                    String p = String.valueOf(item.get("PRD_DE"));
+                    int y = Integer.parseInt(p.substring(0, 4));
+                    int m = Integer.parseInt(p.substring(4, 6));
+                    double value = Double.parseDouble(String.valueOf(item.get("DT")));
+                    if (ppiDataRepository.findByYearAndMonthAndItemName(y, m, itemName).isPresent()) continue;
+                    PpiData ppi = new PpiData();
+                    ppi.setYear(y); ppi.setMonth(m); ppi.setItemName(itemName); ppi.setPpi(value);
+                    ppiDataRepository.save(ppi);
+                    savedCount++;
+                } catch (Exception e) { logger.warn("PPI 파싱 실패 [{}]: {}", itemName, item); }
+            }
+        }
+        logger.info("PPI 저장 완료 - {}/{}, 총 {}건", year, month, savedCount);
         return savedCount;
     }
 
