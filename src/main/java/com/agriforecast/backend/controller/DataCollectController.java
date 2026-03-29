@@ -18,22 +18,25 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173")
 public class DataCollectController {
 
-    private final KamisService kamisService;
+    private final NongnetService nongnetService;
     private final WeatherCollectService weatherCollectService;
     private final OilPriceCollectService oilPriceCollectService;
     private final KosisService kosisService;
     private final ExchangeRateCollectService exchangeRateCollectService;
+    private final CsvImportService csvImportService;
 
-    public DataCollectController(KamisService kamisService,
+    public DataCollectController(NongnetService nongnetService,
                                   WeatherCollectService weatherCollectService,
                                   OilPriceCollectService oilPriceCollectService,
                                   KosisService kosisService,
-                                  ExchangeRateCollectService exchangeRateCollectService) {
-        this.kamisService = kamisService;
+                                  ExchangeRateCollectService exchangeRateCollectService,
+                                  CsvImportService csvImportService) {
+        this.nongnetService = nongnetService;
         this.weatherCollectService = weatherCollectService;
         this.oilPriceCollectService = oilPriceCollectService;
         this.kosisService = kosisService;
         this.exchangeRateCollectService = exchangeRateCollectService;
+        this.csvImportService = csvImportService;
     }
 
     /**
@@ -46,8 +49,7 @@ public class DataCollectController {
             @RequestParam int month) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            result.put("kamis_price", kamisService.collectPriceByYearMonth(year, month));
-            result.put("kamis_supply", kamisService.collectSupplyByYearMonth(year, month));
+            result.put("nongnet_price", nongnetService.collectPriceByYearMonth(year, month));
             result.put("weather", weatherCollectService.collectByYearMonth(year, month));
             result.put("oil_price", oilPriceCollectService.collectByYearMonth(year, month));
             result.put("exchange_rate", exchangeRateCollectService.collectByYearMonth(year, month));
@@ -60,24 +62,13 @@ public class DataCollectController {
     }
 
     /**
-     * KAMIS 가격 수집 (양파)
-     * POST /api/collect/kamis/price?year=2024&month=1
+     * 농넷(Nongnet) 가격 크롤링 (양파/배추)
+     * POST /api/collect/nongnet/price?year=2024&month=1
      */
-    @PostMapping("/kamis/price")
-    public ResponseEntity<Map<String, Object>> collectKamisPrice(
+    @PostMapping("/nongnet/price")
+    public ResponseEntity<Map<String, Object>> collectNongnetPrice(
             @RequestParam int year, @RequestParam int month) {
-        int saved = kamisService.collectPriceByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
-    }
-
-    /**
-     * KAMIS 반입량 수집 (양파)
-     * POST /api/collect/kamis/supply?year=2024&month=1
-     */
-    @PostMapping("/kamis/supply")
-    public ResponseEntity<Map<String, Object>> collectKamisSupply(
-            @RequestParam int year, @RequestParam int month) {
-        int saved = kamisService.collectSupplyByYearMonth(year, month);
+        int saved = nongnetService.collectPriceByYearMonth(year, month);
         return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
     }
 
@@ -157,5 +148,20 @@ public class DataCollectController {
             @RequestParam int startYear, @RequestParam int endYear) {
         int saved = kosisService.collectPpi(startYear, endYear);
         return ResponseEntity.ok(Map.of("saved", saved, "startYear", startYear, "endYear", endYear));
+    }
+
+    /**
+     * 로컬 CSV 데이터 일괄 삽입 (과거 기록 채우기용)
+     * POST /api/collect/csv?filePath=c:\Users\shm87\OneDrive\바탕 화면\졸업프로젝트\agri-forecast-backend\src\test\java\양파3_22.csv
+     */
+    @PostMapping("/csv")
+    public ResponseEntity<Map<String, Object>> importCsv(
+            @RequestParam String filePath) {
+        try {
+            int saved = csvImportService.importAgriPriceCsv(filePath);
+            return ResponseEntity.ok(Map.of("status", "success", "savedCount", saved, "filePath", filePath));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
+        }
     }
 }
