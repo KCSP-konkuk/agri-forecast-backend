@@ -2,6 +2,7 @@ package com.agriforecast.backend.service;
 
 import com.agriforecast.backend.entity.AgriPrice;
 import com.agriforecast.backend.repository.AgriPriceRepository;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -9,11 +10,11 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +23,6 @@ import java.util.Map;
  * 기존 KAMIS API를 대체하여 Jsoup 기반 크롤링 수행.
  */
 @Service
-@Transactional
 public class NongnetService {
 
     private static final Logger logger = LoggerFactory.getLogger(NongnetService.class);
@@ -63,6 +63,9 @@ public class NongnetService {
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
         int savedCount = 0;
 
+        // GET으로 세션 쿠키 획득 (POST 차단 방지)
+        Map<String, String> sessionCookies = acquireSessionCookies();
+
         for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
             String targetDateStr = date.format(dateFmt);
             int currentYear = date.getYear();
@@ -83,7 +86,11 @@ public class NongnetService {
 
                 try {
                     Document doc = Jsoup.connect(URL)
-                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            .cookies(sessionCookies)
+                            .referrer(URL)
+                            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                            .header("Accept-Language", "ko-KR,ko;q=0.9")
                             .data("searchSymbol1", "garak")
                             .data("searchName1", "가락")
                             .data("menuType", "garak")
@@ -148,5 +155,26 @@ public class NongnetService {
         }
         logger.info("Nongnet 크롤링 {}건 DB 저장 완료 ({} ~ {})", savedCount, startDate, endDate);
         return savedCount;
+    }
+
+    /**
+     * GET 요청으로 세션 쿠키(JSESSIONID 등) 획득
+     */
+    private Map<String, String> acquireSessionCookies() {
+        try {
+            Connection.Response response = Jsoup.connect(URL)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .header("Accept-Language", "ko-KR,ko;q=0.9")
+                    .method(Connection.Method.GET)
+                    .timeout(10000)
+                    .execute();
+            Map<String, String> cookies = response.cookies();
+            logger.info("농넷 세션 쿠키 획득: {}", cookies.keySet());
+            return cookies;
+        } catch (Exception e) {
+            logger.warn("농넷 세션 쿠키 획득 실패 (쿠키 없이 진행): {}", e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 }
