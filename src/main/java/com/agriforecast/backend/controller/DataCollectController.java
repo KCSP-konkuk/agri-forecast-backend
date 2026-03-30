@@ -62,14 +62,15 @@ public class DataCollectController {
     }
 
     /**
-     * 농넷(Nongnet) 가격 크롤링 (양파/배추)
+     * 농넷(Nongnet) 가격 크롤링 (양파/배추) - 백그라운드 비동기 실행
      * POST /api/collect/nongnet/price?year=2024&month=1
      */
     @PostMapping("/nongnet/price")
     public ResponseEntity<Map<String, Object>> collectNongnetPrice(
             @RequestParam int year, @RequestParam int month) {
-        int saved = nongnetService.collectPriceByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
+        CompletableFuture.runAsync(() -> nongnetService.collectPriceByYearMonth(year, month));
+        return ResponseEntity.ok(Map.of("status", "started", "year", year, "month", month,
+                "message", "백그라운드에서 수집 중입니다. 서버 로그를 확인하세요."));
     }
 
     /**
