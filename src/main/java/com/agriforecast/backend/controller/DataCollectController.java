@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 public class DataCollectController {
 
     private final NongnetService nongnetService;
-    private final WeatherCollectService weatherCollectService;
     private final OilPriceCollectService oilPriceCollectService;
     private final KosisService kosisService;
     private final ExchangeRateCollectService exchangeRateCollectService;
@@ -28,14 +27,12 @@ public class DataCollectController {
     private final StationWeatherCollectService stationWeatherCollectService;
 
     public DataCollectController(NongnetService nongnetService,
-                                  WeatherCollectService weatherCollectService,
                                   OilPriceCollectService oilPriceCollectService,
                                   KosisService kosisService,
                                   ExchangeRateCollectService exchangeRateCollectService,
                                   CsvImportService csvImportService,
                                   StationWeatherCollectService stationWeatherCollectService) {
         this.nongnetService = nongnetService;
-        this.weatherCollectService = weatherCollectService;
         this.oilPriceCollectService = oilPriceCollectService;
         this.kosisService = kosisService;
         this.exchangeRateCollectService = exchangeRateCollectService;
@@ -54,7 +51,6 @@ public class DataCollectController {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             result.put("nongnet_price", nongnetService.collectPriceByYearMonth(year, month));
-            result.put("weather", weatherCollectService.collectByYearMonth(year, month));
             result.put("oil_price", oilPriceCollectService.collectByYearMonth(year, month));
             result.put("exchange_rate", exchangeRateCollectService.collectByYearMonth(year, month));
             result.put("status", "success");
@@ -73,17 +69,6 @@ public class DataCollectController {
     public ResponseEntity<Map<String, Object>> collectNongnetPrice(
             @RequestParam int year, @RequestParam int month) {
         int saved = nongnetService.collectPriceByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
-    }
-
-    /**
-     * 기상청 날씨 수집 (무안 164)
-     * POST /api/collect/weather?year=2024&month=1
-     */
-    @PostMapping("/weather")
-    public ResponseEntity<Map<String, Object>> collectWeather(
-            @RequestParam int year, @RequestParam int month) {
-        int saved = weatherCollectService.collectByYearMonth(year, month);
         return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
     }
 
@@ -135,7 +120,7 @@ public class DataCollectController {
     // ── 지점별 기상 데이터 (kma_sfcdd.php) ────────────────────────────────────
 
     /**
-     * 지점별 기상 - 특정 날짜 수집 (12개 지점 동시)
+     * 지점별 기상 - 특정 날짜 수집 (11개 지점 동시)
      * POST /api/collect/station-weather/date?date=2024-01-15
      */
     @PostMapping("/station-weather/date")
