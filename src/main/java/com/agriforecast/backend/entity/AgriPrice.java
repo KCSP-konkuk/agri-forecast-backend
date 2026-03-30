@@ -37,4 +37,7 @@ public class AgriPrice {
 
     @Column(name = "AVG_PRICE")
     private Double avgPrice;
+
+    @Column(name = "PERIOD_TYPE")
+    private String periodType;
 }
