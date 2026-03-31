@@ -27,7 +27,7 @@ public class AgriPriceScheduler {
     private static final Logger logger = LoggerFactory.getLogger(AgriPriceScheduler.class);
 
     /** CSV 이후 크롤링 수집 시작일 */
-    private static final LocalDate CRAWL_START = LocalDate.of(2026, 1, 1);
+    private static final LocalDate CRAWL_START = LocalDate.of(2026, 3, 22);
 
     private final NongnetService nongnetService;
 
