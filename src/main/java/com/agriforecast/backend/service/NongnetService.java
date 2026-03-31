@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -27,6 +27,7 @@ public class NongnetService {
 
     private static final Logger logger = LoggerFactory.getLogger(NongnetService.class);
     private static final String URL = "https://www.nongnet.or.kr/front/M000000258/marketInfo/garak.do";
+    private static final Map<String, String[]> TARGET_ITEMS = createTargetItems();
 
     private final AgriPriceRepository agriPriceRepository;
 
@@ -56,10 +57,6 @@ public class NongnetService {
      * 시작일부터 종료일까지 매일(일별) 크롤링 수행
      */
     public int collectPriceByDateRange(LocalDate startDate, LocalDate endDate) {
-        Map<String, String[]> targetItems = new HashMap<>();
-        targetItems.put("배추", new String[] { "21100", "10키로망대", "10" });
-        targetItems.put("양파", new String[] { "24400", "1키로", "1" });
-
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
         int savedCount = 0;
 
@@ -72,7 +69,7 @@ public class NongnetService {
             int currentMonth = date.getMonthValue();
             int currentDay = date.getDayOfMonth();
 
-            for (Map.Entry<String, String[]> item : targetItems.entrySet()) {
+            for (Map.Entry<String, String[]> item : TARGET_ITEMS.entrySet()) {
                 String pumName = item.getKey();
                 String pumCd = item.getValue()[0];
                 String trdName = item.getValue()[1];
@@ -176,5 +173,14 @@ public class NongnetService {
             logger.warn("농넷 세션 쿠키 획득 실패 (쿠키 없이 진행): {}", e.getMessage());
             return Collections.emptyMap();
         }
+    }
+
+    private static Map<String, String[]> createTargetItems() {
+        Map<String, String[]> items = new LinkedHashMap<>();
+        items.put("배추", new String[] { "21100", "10키로망대", "10" });
+        items.put("양파", new String[] { "24400", "1키로", "1" });
+        items.put("양배추", new String[] { "21200", "8키로망대", "8" });
+        items.put("당근", new String[] { "23200", "20키로상자", "20" });
+        return items;
     }
 }

@@ -62,7 +62,7 @@ public class DataCollectController {
     }
 
     /**
-     * 농넷(Nongnet) 가격 크롤링 (양파/배추) - 백그라운드 비동기 실행
+     * 농넷(Nongnet) 가격 크롤링 (배추/양파/양배추/당근) - 백그라운드 비동기 실행
      * POST /api/collect/nongnet/price?year=2024&month=1
      */
     @PostMapping("/nongnet/price")

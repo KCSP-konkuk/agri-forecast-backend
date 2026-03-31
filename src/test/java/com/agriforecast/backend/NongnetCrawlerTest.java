@@ -7,7 +7,7 @@ import org.jsoup.select.Elements;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -21,14 +21,16 @@ public class NongnetCrawlerTest {
         System.out.println("========== 농넷(Nongnet) 일자별 연속 정밀 크롤링 시작 ==========");
 
         // {품목명, 품목코드, 단위명, 단위코드}
-        Map<String, String[]> targetItems = new HashMap<>();
+        Map<String, String[]> targetItems = new LinkedHashMap<>();
         targetItems.put("배추", new String[] { "21100", "10키로망대", "10" });
         targetItems.put("양파", new String[] { "24400", "1키로", "1" });
+        targetItems.put("양배추", new String[] { "21200", "8키로망대", "8" });
+        targetItems.put("당근", new String[] { "23200", "20키로상자", "20" });
 
         // ================== [수집 기간 설정] ==================
         // 시작일과 종료일을 세팅합니다! (1년치 데이터 수집)
-        LocalDate startDate = LocalDate.of(2025, 12, 1);
-        LocalDate endDate = LocalDate.of(2025, 12, 31);
+        LocalDate startDate = LocalDate.of(2026, 3, 22);
+        LocalDate endDate = LocalDate.of(2026, 3, 28);
 
         // 날짜를 "0000년 00월 00일" 형태 문자열로 돌려주는 포맷터
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일");
