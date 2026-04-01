@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 외부 API 데이터 수집 컨트롤러
@@ -18,22 +19,25 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173")
 public class DataCollectController {
 
-    private final KamisService kamisService;
-    private final WeatherCollectService weatherCollectService;
+    private final NongnetService nongnetService;
     private final OilPriceCollectService oilPriceCollectService;
     private final KosisService kosisService;
     private final ExchangeRateCollectService exchangeRateCollectService;
+    private final CsvImportService csvImportService;
+    private final StationWeatherCollectService stationWeatherCollectService;
 
-    public DataCollectController(KamisService kamisService,
-                                  WeatherCollectService weatherCollectService,
+    public DataCollectController(NongnetService nongnetService,
                                   OilPriceCollectService oilPriceCollectService,
                                   KosisService kosisService,
-                                  ExchangeRateCollectService exchangeRateCollectService) {
-        this.kamisService = kamisService;
-        this.weatherCollectService = weatherCollectService;
+                                  ExchangeRateCollectService exchangeRateCollectService,
+                                  CsvImportService csvImportService,
+                                  StationWeatherCollectService stationWeatherCollectService) {
+        this.nongnetService = nongnetService;
         this.oilPriceCollectService = oilPriceCollectService;
         this.kosisService = kosisService;
         this.exchangeRateCollectService = exchangeRateCollectService;
+        this.csvImportService = csvImportService;
+        this.stationWeatherCollectService = stationWeatherCollectService;
     }
 
     /**
@@ -46,9 +50,7 @@ public class DataCollectController {
             @RequestParam int month) {
         Map<String, Object> result = new LinkedHashMap<>();
         try {
-            result.put("kamis_price", kamisService.collectPriceByYearMonth(year, month));
-            result.put("kamis_supply", kamisService.collectSupplyByYearMonth(year, month));
-            result.put("weather", weatherCollectService.collectByYearMonth(year, month));
+            result.put("nongnet_price", nongnetService.collectPriceByYearMonth(year, month));
             result.put("oil_price", oilPriceCollectService.collectByYearMonth(year, month));
             result.put("exchange_rate", exchangeRateCollectService.collectByYearMonth(year, month));
             result.put("status", "success");
@@ -60,36 +62,15 @@ public class DataCollectController {
     }
 
     /**
-     * KAMIS 가격 수집 (양파)
-     * POST /api/collect/kamis/price?year=2024&month=1
+     * 농넷(Nongnet) 가격 크롤링 (배추/양파/양배추/당근) - 백그라운드 비동기 실행
+     * POST /api/collect/nongnet/price?year=2024&month=1
      */
-    @PostMapping("/kamis/price")
-    public ResponseEntity<Map<String, Object>> collectKamisPrice(
+    @PostMapping("/nongnet/price")
+    public ResponseEntity<Map<String, Object>> collectNongnetPrice(
             @RequestParam int year, @RequestParam int month) {
-        int saved = kamisService.collectPriceByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
-    }
-
-    /**
-     * KAMIS 반입량 수집 (양파)
-     * POST /api/collect/kamis/supply?year=2024&month=1
-     */
-    @PostMapping("/kamis/supply")
-    public ResponseEntity<Map<String, Object>> collectKamisSupply(
-            @RequestParam int year, @RequestParam int month) {
-        int saved = kamisService.collectSupplyByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
-    }
-
-    /**
-     * 기상청 날씨 수집 (무안 164)
-     * POST /api/collect/weather?year=2024&month=1
-     */
-    @PostMapping("/weather")
-    public ResponseEntity<Map<String, Object>> collectWeather(
-            @RequestParam int year, @RequestParam int month) {
-        int saved = weatherCollectService.collectByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
+        CompletableFuture.runAsync(() -> nongnetService.collectPriceByYearMonth(year, month));
+        return ResponseEntity.ok(Map.of("status", "started", "year", year, "month", month,
+                "message", "백그라운드에서 수집 중입니다. 서버 로그를 확인하세요."));
     }
 
     /**
@@ -137,6 +118,52 @@ public class DataCollectController {
                 "startDate", startDate.toString(), "endDate", endDate.toString()));
     }
 
+    // ── 지점별 기상 데이터 (kma_sfcdd.php) ────────────────────────────────────
+
+    /**
+     * 지점별 기상 - 특정 날짜 수집 (11개 지점 동시)
+     * POST /api/collect/station-weather/date?date=2024-01-15
+     */
+    @PostMapping("/station-weather/date")
+    public ResponseEntity<Map<String, Object>> collectStationWeatherByDate(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        int saved = stationWeatherCollectService.collectByDate(date);
+        return ResponseEntity.ok(Map.of("saved", saved, "date", date.toString()));
+    }
+
+    /**
+     * 지점별 기상 - 특정 연월 수집
+     * POST /api/collect/station-weather?year=2024&month=1
+     */
+    @PostMapping("/station-weather")
+    public ResponseEntity<Map<String, Object>> collectStationWeatherByYearMonth(
+            @RequestParam int year, @RequestParam int month) {
+        int saved = stationWeatherCollectService.collectByYearMonth(year, month);
+        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
+    }
+
+    /**
+     * 지점별 기상 - 날짜 범위 수집 (초기 적재용, 백그라운드 비동기 실행)
+     * POST /api/collect/station-weather/range?startDate=2017-01-01&endDate=2025-12-31
+     *
+     * ※ 2017년부터 수집하면 2018년 데이터의 전년값이 자동으로 채워집니다.
+     *    일별 100ms 간격으로 호출하므로 수집 시간이 수 분 소요됩니다.
+     */
+    @PostMapping("/station-weather/range")
+    public ResponseEntity<Map<String, Object>> collectStationWeatherByRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        CompletableFuture.runAsync(() ->
+                stationWeatherCollectService.collectByDateRange(startDate, endDate));
+        return ResponseEntity.ok(Map.of(
+                "status", "started",
+                "startDate", startDate.toString(),
+                "endDate", endDate.toString(),
+                "message", "백그라운드에서 수집 중입니다. 서버 로그를 확인하세요."));
+    }
+
+    // ── CPI / PPI ─────────────────────────────────────────────────────────────
+
     /**
      * CPI 수집 (연도 범위)
      * POST /api/collect/cpi?startYear=2018&endYear=2025
@@ -157,5 +184,20 @@ public class DataCollectController {
             @RequestParam int startYear, @RequestParam int endYear) {
         int saved = kosisService.collectPpi(startYear, endYear);
         return ResponseEntity.ok(Map.of("saved", saved, "startYear", startYear, "endYear", endYear));
+    }
+
+    /**
+     * 로컬 CSV 데이터 일괄 삽입 (과거 기록 채우기용)
+     * POST /api/collect/csv?filePath=c:\Users\shm87\OneDrive\바탕 화면\졸업프로젝트\agri-forecast-backend\src\test\java\양파3_22.csv
+     */
+    @PostMapping("/csv")
+    public ResponseEntity<Map<String, Object>> importCsv(
+            @RequestParam String filePath) {
+        try {
+            int saved = csvImportService.importAgriPriceCsv(filePath);
+            return ResponseEntity.ok(Map.of("status", "success", "savedCount", saved, "filePath", filePath));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", e.getMessage()));
+        }
     }
 }

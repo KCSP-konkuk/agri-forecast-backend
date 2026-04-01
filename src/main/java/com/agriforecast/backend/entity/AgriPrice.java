@@ -7,12 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * 농산물 도매 가격 데이터 (순별)
- * periodType: 0=상순, 1=중순, 2=하순
+ * 농산물 도매 가격 데이터 (일별)
  */
 @Entity
 @Table(name = "agri_price", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"ITEM_NAME", "YEAR", "MONTH", "PERIOD_TYPE"})
+        @UniqueConstraint(columnNames = { "ITEM_NAME", "YEAR", "MONTH", "DAY" })
 })
 @Getter
 @Setter
@@ -33,16 +32,12 @@ public class AgriPrice {
     @Column(name = "MONTH", nullable = false)
     private Integer month;
 
-    // 0=상순, 1=중순, 2=하순
-    @Column(name = "PERIOD_TYPE", nullable = false)
-    private Integer periodType;
+    @Column(name = "DAY", nullable = false)
+    private Integer day;
 
     @Column(name = "AVG_PRICE")
     private Double avgPrice;
 
-    @Column(name = "PREV_YEAR_PRICE")
-    private Double prevYearPrice;
-
-    @Column(name = "NORMAL_PRICE")
-    private Double normalPrice;
+    @Column(name = "PERIOD_TYPE")
+    private String periodType;
 }
