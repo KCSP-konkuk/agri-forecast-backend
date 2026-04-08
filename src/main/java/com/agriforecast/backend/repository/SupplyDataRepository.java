@@ -8,9 +8,11 @@ import java.util.Optional;
 
 public interface SupplyDataRepository extends JpaRepository<SupplyData, Integer> {
 
-    Optional<SupplyData> findByItemNameAndYearAndMonthAndPeriodType(
-            String itemName, Integer year, Integer month, Integer periodType);
+    Optional<SupplyData> findByItemNameAndYearAndMonthAndDay(
+            String itemName, Integer year, Integer month, Integer day);
 
-    List<SupplyData> findByItemNameAndYearBetweenOrderByYearAscMonthAscPeriodTypeAsc(
+    Optional<SupplyData> findTopByOrderByYearDescMonthDescDayDesc();
+
+    List<SupplyData> findByItemNameAndYearBetweenOrderByYearAscMonthAscDayAsc(
             String itemName, Integer startYear, Integer endYear);
 }

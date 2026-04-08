@@ -38,3 +38,9 @@ out/
 
 ### Application Properties ###
 src/main/resources/application.properties
+
+### Local CSV Data ###
+src/test/java/file_1_Sheet1.csv
+src/test/java/file_2_Sheet1.csv
+src/test/java/file_3_Sheet1.csv
+src/test/java/file_4_Sheet1.csv

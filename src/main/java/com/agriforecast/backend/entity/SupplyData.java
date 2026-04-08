@@ -7,12 +7,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * 농산물 반입량 데이터 (순별)
- * periodType: 0=상순, 1=중순, 2=하순
+ * 농산물 반입량 데이터 (일별)
  */
 @Entity
 @Table(name = "supply_data", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"ITEM_NAME", "YEAR", "MONTH", "PERIOD_TYPE"})
+        @UniqueConstraint(columnNames = {"ITEM_NAME", "YEAR", "MONTH", "DAY"})
 })
 @Getter
 @Setter
@@ -33,9 +32,8 @@ public class SupplyData {
     @Column(name = "MONTH", nullable = false)
     private Integer month;
 
-    // 0=상순, 1=중순, 2=하순
-    @Column(name = "PERIOD_TYPE", nullable = false)
-    private Integer periodType;
+    @Column(name = "DAY", nullable = false)
+    private Integer day;
 
     @Column(name = "TOTAL_SUPPLY")
     private Double totalSupply;
