@@ -42,3 +42,7 @@ kosis.ppi.obj-l1=13102134764ACC_CD.*
 
 # 한국수출입은행 환율 API
 koreaexim.auth-key=YOUR_KOREAEXIM_AUTH_KEY
+
+# 가락시장 공공데이터 API (반입량)
+garak.public-data.id=YOUR_GARAK_PUBLIC_DATA_ID
+garak.public-data.password=YOUR_GARAK_PUBLIC_DATA_PASSWORD
