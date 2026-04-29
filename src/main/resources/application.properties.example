@@ -3,7 +3,7 @@ spring.application.name=agriforecast-backend
 # Database Configuration
 spring.datasource.url=jdbc:mysql://localhost:3306/agriforecast?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 spring.datasource.username=root
-spring.datasource.password=kcsp # 서버 안켜지면 이거 비밀번호 고치셈
+spring.datasource.password=YOUR_DB_PASSWORD
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 # JPA Configuration
@@ -16,23 +16,21 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
 spring.jackson.time-zone=Asia/Seoul
 
 # Naver DataLab API
-naver.datalab.client-id=9IOqkfRZe99ipoShBBn7
-naver.datalab.client-secret=BlhVGe9wYO
+naver.datalab.client-id=YOUR_NAVER_CLIENT_ID
+naver.datalab.client-secret=YOUR_NAVER_CLIENT_SECRET
 
-# KAMIS API (농산물유통정보 - 가격, 반입량)
-kamis.cert-key=1332dc1b-de39-484d-9568-10d6c86bf59f
-# p_cert_id: KAMIS 가입 시 등록한 ID (이메일 또는 사용자 코드)
-kamis.cert-id=6763
+# KAMIS API
+kamis.cert-key=YOUR_KAMIS_CERT_KEY
+kamis.cert-id=YOUR_KAMIS_CERT_ID
 
 # 기상청 ASOS API
-weather.auth-key=R7OuJuGxRaWzribhsTWlTQ
+weather.auth-key=YOUR_WEATHER_AUTH_KEY
 
-# 오피넷 API (국내유가)
-opinet.api-key=F260325575
+# 오피넷 API
+opinet.api-key=YOUR_OPINET_API_KEY
 
-# KOSIS API (소비자물가지수, 생산자물가지수)
-kosis.api-key=ZjI0Njc4YmUzMDdhOWZmMjQzOGIwNDhlMjU2ZGE2NTA=
-# CPI: 통계청 소비자물가지수, PPI: 한국은행 생산자물가지수
+# KOSIS API
+kosis.api-key=YOUR_KOSIS_API_KEY
 kosis.cpi.org-id=101
 kosis.cpi.tbl-id=DT_1J22112
 kosis.cpi.itm-id=T+
@@ -43,4 +41,4 @@ kosis.ppi.itm-id=13103134764999+
 kosis.ppi.obj-l1=13102134764ACC_CD.*
 
 # 한국수출입은행 환율 API
-koreaexim.auth-key=MQYSy7sOTVB76RkvczAcMmPyefDqXLNl
+koreaexim.auth-key=YOUR_KOREAEXIM_AUTH_KEY
