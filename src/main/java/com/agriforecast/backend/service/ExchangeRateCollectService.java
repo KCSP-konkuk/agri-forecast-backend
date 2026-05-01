@@ -27,7 +27,7 @@ public class ExchangeRateCollectService {
 
     private static final Logger logger = LoggerFactory.getLogger(ExchangeRateCollectService.class);
     private static final String API_URL =
-            "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey={authkey}&searchdate={date}&data=AP01";
+            "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey={authkey}&searchdate={date}&data=AP01";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @Value("${koreaexim.auth-key}")
@@ -116,14 +116,16 @@ public class ExchangeRateCollectService {
         }
 
         List<Map<String, Object>> rates = fetchRates(date);
-        if (rates == null || rates.isEmpty()) {
-            logger.warn("환율 데이터 없음 (주말/공휴일) - {}", date);
-            return false;
-        }
 
-        Double usd = extractRate(rates, "USD");
-        Double cny = extractRate(rates, "CNH");
-        if (usd == null && cny == null) return false;
+        Double usd = null;
+        Double cny = null;
+
+        if (rates == null || rates.isEmpty()) {
+            logger.warn("환율 데이터 없음 (주말/공휴일) - {}, null로 저장", date);
+        } else {
+            usd = extractRate(rates, "USD");
+            cny = extractRate(rates, "CNH");
+        }
 
         ExchangeRateDaily entity = new ExchangeRateDaily();
         entity.setBaseDate(date);
@@ -141,7 +143,6 @@ public class ExchangeRateCollectService {
     public int collectDailyRange(LocalDate startDate, LocalDate endDate) {
         int savedCount = 0;
         for (LocalDate d = startDate; !d.isAfter(endDate); d = d.plusDays(1)) {
-            if (d.getDayOfWeek().getValue() >= 6) continue;
             if (collectByDate(d)) savedCount++;
         }
         logger.info("환율 일별 범위 저장 완료 - {} ~ {}, {}건", startDate, endDate, savedCount);
