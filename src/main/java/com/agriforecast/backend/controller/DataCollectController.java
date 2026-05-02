@@ -26,10 +26,12 @@ public class DataCollectController {
     private final ExchangeRateCollectService exchangeRateCollectService;
     private final CsvImportService csvImportService;
     private final StationWeatherCollectService stationWeatherCollectService;
+    private final OilPriceCsvImportService oilPriceCsvImportService;
 
     public DataCollectController(NongnetService nongnetService,
                                   SupplyCollectService supplyCollectService,
                                   OilPriceCollectService oilPriceCollectService,
+                                  OilPriceCsvImportService oilPriceCsvImportService,
                                   KosisService kosisService,
                                   ExchangeRateCollectService exchangeRateCollectService,
                                   CsvImportService csvImportService,
@@ -37,6 +39,7 @@ public class DataCollectController {
         this.nongnetService = nongnetService;
         this.supplyCollectService = supplyCollectService;
         this.oilPriceCollectService = oilPriceCollectService;
+        this.oilPriceCsvImportService = oilPriceCsvImportService;
         this.kosisService = kosisService;
         this.exchangeRateCollectService = exchangeRateCollectService;
         this.csvImportService = csvImportService;
@@ -107,14 +110,23 @@ public class DataCollectController {
     }
 
     /**
-     * 유가 수집 (국내+국제)
-     * POST /api/collect/oil?year=2024&month=1
+     * 유가 수집 (오피넷 전국 주유소 평균가격)
+     * POST /api/collect/oil
      */
     @PostMapping("/oil")
-    public ResponseEntity<Map<String, Object>> collectOil(
-            @RequestParam int year, @RequestParam int month) {
-        int saved = oilPriceCollectService.collectByYearMonth(year, month);
-        return ResponseEntity.ok(Map.of("saved", saved, "year", year, "month", month));
+    public ResponseEntity<Map<String, Object>> collectOil() {
+        int saved = oilPriceCollectService.collectCurrent();
+        return ResponseEntity.ok(Map.of("saved", saved));
+    }
+
+    /**
+     * 유가 CSV 과거 데이터 적재
+     * POST /api/collect/oil/csv
+     */
+    @PostMapping("/oil/csv")
+    public ResponseEntity<Map<String, Object>> importOilCsv() {
+        int saved = oilPriceCsvImportService.importFromCsv();
+        return ResponseEntity.ok(Map.of("saved", saved));
     }
 
     /**
